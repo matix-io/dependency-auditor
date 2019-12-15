@@ -1,0 +1,39 @@
+#!/bin/sh
+
+# general options
+if [ -z "$DA_CONSOLE_OUTPUT" ]; then DA_CONSOLE_OUTPUT=1; fi # write results to stdout
+if [ -z "$DA_USE_PULSE" ]; then DA_USE_PULSE=0; fi # upload results to matio.io pulse
+
+# python options
+if [ -z "$DA_PIP_EXECUTABLE" ]; then DA_PIP_EXECUTABLE=pip; fi
+if [ -z "$DA_PYTHON_EXECUTABLE" ]; then DA_PYTHON_EXECUTABLE=python; fi
+# PYTHON_REQUIREMENTS_FILE (to be set by user)
+
+exit_code=0
+
+audit_python() {
+  $DA_PIP_EXECUTABLE install safety 2>/dev/null 1>/dev/null
+  output=$(safety check -r $DA_PYTHON_REQUIREMENTS_FILE --json)
+
+  if [ "$DA_CONSOLE_OUTPUT" = "1" ]; then
+    safety check -r $DA_PYTHON_REQUIREMENTS_FILE
+  fi
+  
+  if [ "$output" = "[]" ]; then
+    echo "requirements.txt is safe"
+  else
+    echo "vulnerabilities found"
+    exit_code=1
+  fi
+}
+
+finalize() {
+  exit $exit_code
+}
+
+if [ ! -z "$DA_PYTHON_REQUIREMENTS_FILE" ]; then
+  echo "found requirements.txt, auditing python dependencies"
+  audit_python
+fi
+
+finalize
